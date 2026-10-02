@@ -1,0 +1,531 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f6f4ed">
+  <title>Lucky Break — A dice game</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: #f6f4ed;
+      --white: #fffefa;
+      --ink: #20241e;
+      --muted: #77796e;
+      --line: #e8e5dc;
+      --green: #38654b;
+      --green-dark: #284c39;
+      --green-pale: #eaf0e8;
+      --orange: #da613d;
+      --orange-pale: #faede6;
+      --gold: #e6b545;
+      --shadow: 0 18px 55px rgba(43, 49, 37, .08);
+    }
+
+    *, *::before, *::after { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      color: var(--ink);
+      background-color: var(--paper);
+      background-image: radial-gradient(#d9d6c9 0.65px, transparent 0.65px);
+      background-size: 17px 17px;
+      font-family: "Trebuchet MS", "Avenir Next", Avenir, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    button { font: inherit; }
+
+    .page {
+      width: min(100% - 44px, 1000px);
+      margin: 0 auto;
+      padding: 30px 0 38px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      min-height: 38px;
+    }
+
+    .brand {
+      display: inline-flex;
+      gap: 10px;
+      align-items: center;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: .03em;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      border-radius: 9px;
+      color: var(--white);
+      background: var(--green);
+      font-size: 17px;
+      transform: rotate(-8deg);
+    }
+
+    .goal-setting {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .goal-setting select {
+      min-height: 36px;
+      padding: 0 28px 0 11px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      outline-color: var(--green);
+      color: var(--ink);
+      background: var(--white);
+      font: inherit;
+      font-size: 12px;
+    }
+
+    main { padding-top: 55px; }
+
+    .intro { margin: 0 auto 29px; text-align: center; }
+
+    .eyebrow {
+      display: inline-flex;
+      gap: 7px;
+      align-items: center;
+      margin: 0 0 10px;
+      color: var(--green);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .17em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before { width: 17px; height: 1px; background: var(--green); content: ""; }
+
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(38px, 6vw, 56px);
+      font-weight: 500;
+      letter-spacing: -.035em;
+      line-height: 1.06;
+    }
+
+    .intro p {
+      margin: 11px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .scoreboard {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--white);
+      box-shadow: var(--shadow);
+    }
+
+    .player {
+      position: relative;
+      min-width: 0;
+      padding: 21px 25px 20px;
+      transition: background-color .2s ease;
+    }
+
+    .player + .player { border-left: 1px solid var(--line); }
+    .player.active { background: #f1f5ef; }
+    .player.active::before { position: absolute; inset: 0 auto 0 0; width: 3px; background: var(--green); content: ""; }
+    .player.winner { background: #fbf4e4; }
+    .player.winner::before { background: var(--gold); }
+
+    .player-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+    .player-name {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+
+    .turn-indicator { width: 7px; height: 7px; border-radius: 50%; background: #c7c5bb; }
+    .active .turn-indicator { background: var(--green); box-shadow: 0 0 0 3px #dce7da; }
+
+    .active-label {
+      color: var(--green);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      visibility: hidden;
+    }
+
+    .active .active-label { visibility: visible; }
+
+    .bank-score {
+      margin-top: 6px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 59px;
+      line-height: 1;
+    }
+
+    .progress-track { height: 4px; margin-top: 15px; overflow: hidden; border-radius: 4px; background: #eeece5; }
+    .progress-fill { width: 0%; height: 100%; border-radius: inherit; background: var(--green); transition: width .35s ease; }
+    .player:nth-child(2) .progress-fill { background: var(--orange); }
+
+    .table {
+      display: grid;
+      min-height: 263px;
+      grid-template-columns: 1fr minmax(165px, 230px) 1fr;
+      align-items: center;
+      gap: 14px;
+      margin-top: 16px;
+      padding: 27px 22px 23px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--white);
+      box-shadow: var(--shadow);
+    }
+
+    .turn-summary { align-self: stretch; display: flex; flex-direction: column; justify-content: center; min-width: 0; }
+    .turn-summary:first-child { align-items: flex-start; text-align: left; }
+    .turn-summary:last-child { align-items: flex-end; text-align: right; }
+    .turn-label { color: var(--muted); font-size: 9px; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
+    .turn-name { max-width: 100%; margin-top: 7px; overflow-wrap: anywhere; font-size: 14px; font-weight: 800; }
+    .turn-points { margin-top: 3px; color: var(--green); font-family: Georgia, "Times New Roman", serif; font-size: 34px; line-height: 1.1; }
+    .turn-summary:last-child .turn-points { color: var(--orange); }
+    .turn-caption { margin-top: 5px; color: var(--muted); font-size: 10px; }
+
+    .dice-stage { display: flex; min-width: 0; flex-direction: column; align-items: center; justify-content: center; }
+
+    .dice-pair { display: flex; min-height: 91px; align-items: center; justify-content: center; gap: 13px; }
+
+    .die {
+      display: grid;
+      width: clamp(66px, 10vw, 82px);
+      aspect-ratio: 1;
+      grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+      padding: 12px;
+      border: 1px solid #e7e2d8;
+      border-radius: 13px;
+      background: linear-gradient(145deg, #fff 0%, #f7f5ef 100%);
+      box-shadow: 0 5px 0 #e8e4db, 0 9px 16px rgba(45, 43, 34, .09);
+    }
+
+    .pip { width: 10px; height: 10px; align-self: center; justify-self: center; border-radius: 50%; background: var(--green-dark); opacity: 0; }
+    .die[data-value="1"] .pip:nth-child(5),
+    .die[data-value="2"] .pip:nth-child(1), .die[data-value="2"] .pip:nth-child(9),
+    .die[data-value="3"] .pip:nth-child(1), .die[data-value="3"] .pip:nth-child(5), .die[data-value="3"] .pip:nth-child(9),
+    .die[data-value="4"] .pip:nth-child(1), .die[data-value="4"] .pip:nth-child(3), .die[data-value="4"] .pip:nth-child(7), .die[data-value="4"] .pip:nth-child(9),
+    .die[data-value="5"] .pip:nth-child(1), .die[data-value="5"] .pip:nth-child(3), .die[data-value="5"] .pip:nth-child(5), .die[data-value="5"] .pip:nth-child(7), .die[data-value="5"] .pip:nth-child(9),
+    .die[data-value="6"] .pip:nth-child(1), .die[data-value="6"] .pip:nth-child(3), .die[data-value="6"] .pip:nth-child(4), .die[data-value="6"] .pip:nth-child(6), .die[data-value="6"] .pip:nth-child(7), .die[data-value="6"] .pip:nth-child(9) { opacity: 1; }
+
+    .dice-result { min-height: 17px; margin-top: 19px; color: var(--muted); font-size: 10px; font-weight: 700; text-align: center; }
+    .dice-result.lucky { color: var(--green); }
+    .dice-result.risk { color: var(--orange); }
+
+    .controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin-top: 19px; }
+
+    .button {
+      display: inline-flex;
+      min-height: 47px;
+      align-items: center;
+      justify-content: center;
+      gap: 9px;
+      padding: 0 21px;
+      border: 1px solid transparent;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 12px;
+      font-weight: 800;
+      transition: transform .15s ease, background-color .15s ease, box-shadow .15s ease;
+    }
+
+    .button:not(:disabled):active { transform: translateY(1px); }
+    .button:focus-visible, select:focus-visible { outline: 3px solid #dfa831; outline-offset: 3px; }
+    .button:disabled { cursor: not-allowed; opacity: .55; }
+
+    .roll-button { min-width: 158px; color: white; background: var(--green); box-shadow: 0 3px 0 var(--green-dark); }
+    .roll-button:not(:disabled):hover { background: #315a42; }
+    .button-icon { font-size: 18px; line-height: 1; }
+
+    .hold-button { min-width: 113px; border-color: var(--line); color: var(--ink); background: var(--white); }
+    .hold-button:not(:disabled):hover, .reset-button:hover { background: #f2f0e9; }
+
+    .reset-row { display: flex; justify-content: center; margin-top: 16px; }
+
+    .reset-button { min-height: 34px; padding: 0 11px; border-color: transparent; color: var(--muted); background: transparent; font-size: 10px; }
+
+    .rules {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px 27px;
+      margin: 24px 0 0;
+      color: #727267;
+      font-size: 10px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .rules span { display: inline-flex; align-items: center; gap: 7px; }
+    .rule-dot { width: 6px; height: 6px; flex: 0 0 auto; border-radius: 50%; background: var(--green); }
+    .rules span:last-child .rule-dot { background: var(--orange); }
+    .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; clip-path: inset(50%); }
+
+    @media (max-width: 600px) {
+      .page { width: calc(100% - 28px); padding-top: 19px; }
+      main { padding-top: 42px; }
+      .intro { margin-bottom: 22px; }
+      .intro p { max-width: 310px; margin-right: auto; margin-left: auto; font-size: 12px; }
+      .player { padding: 17px 15px; }
+      .bank-score { font-size: 51px; }
+      .table { min-height: 230px; grid-template-columns: 1fr 1.45fr 1fr; gap: 5px; padding: 20px 12px 17px; }
+      .die { width: clamp(55px, 18vw, 72px); padding: 9px; border-radius: 11px; }
+      .dice-pair { min-height: 76px; gap: 9px; }
+      .pip { width: 9px; height: 9px; }
+      .turn-name { font-size: 11px; }
+      .turn-points { font-size: 29px; }
+      .turn-caption { max-width: 76px; font-size: 9px; }
+      .turn-label { font-size: 8px; }
+    }
+
+    @media (max-width: 360px) {
+      .goal-setting { gap: 6px; font-size: 11px; }
+      .goal-setting select { padding-right: 19px; }
+      .player { padding-right: 11px; padding-left: 13px; }
+      .active-label { font-size: 8px; }
+      .table { grid-template-columns: 1fr minmax(117px, auto) 1fr; gap: 2px; padding-right: 8px; padding-left: 8px; }
+      .die { width: 54px; padding: 8px; }
+      .button { padding-right: 15px; padding-left: 15px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">✳</span><span>LUCKY BREAK</span></div>
+      <label class="goal-setting" for="goal-select">Race to
+        <select id="goal-select" aria-label="Choose the winning score">
+          <option value="30">30 points</option>
+          <option value="50" selected>50 points</option>
+          <option value="75">75 points</option>
+          <option value="100">100 points</option>
+        </select>
+      </label>
+    </header>
+
+    <main>
+      <section class="intro" aria-labelledby="game-title">
+        <div class="eyebrow">A little game of chance</div>
+        <h1 id="game-title">Lucky Break</h1>
+        <p>Roll for glory. Know when to walk away.</p>
+      </section>
+
+      <section class="scoreboard" aria-label="Player scores">
+        <article class="player active" id="player-panel-0" aria-label="Player 1 score">
+          <div class="player-heading">
+            <span class="player-name"><span class="turn-indicator" aria-hidden="true"></span>Player 1</span>
+            <span class="active-label">Your turn</span>
+          </div>
+          <div class="bank-score" id="score-0">0</div>
+          <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progress-0"></div></div>
+        </article>
+        <article class="player" id="player-panel-1" aria-label="Player 2 score">
+          <div class="player-heading">
+            <span class="player-name"><span class="turn-indicator" aria-hidden="true"></span>Player 2</span>
+            <span class="active-label">Your turn</span>
+          </div>
+          <div class="bank-score" id="score-1">0</div>
+          <div class="progress-track" aria-hidden="true"><div class="progress-fill" id="progress-1"></div></div>
+        </article>
+      </section>
+
+      <section class="table" aria-label="Current turn">
+        <div class="turn-summary">
+          <span class="turn-label">At the table</span>
+          <span class="turn-name" id="current-player">Player 1</span>
+          <span class="turn-points" id="turn-score">0</span>
+          <span class="turn-caption">points this turn</span>
+        </div>
+
+        <div class="dice-stage">
+          <div class="dice-pair" role="img" aria-label="Dice ready to roll">
+            <div class="die" id="die-0" data-value="1"><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+            <div class="die" id="die-1" data-value="1"><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span></div>
+          </div>
+          <div class="dice-result" id="result-message" aria-live="polite">Ready when you are</div>
+        </div>
+
+        <div class="turn-summary">
+          <span class="turn-label">Your target</span>
+          <span class="turn-name">First to <span id="target-label">50</span></span>
+          <span class="turn-points" id="roll-total">&mdash;</span>
+          <span class="turn-caption">points on the dice</span>
+        </div>
+      </section>
+
+      <div class="controls" aria-label="Game controls">
+        <button class="button roll-button" id="roll-button" type="button"><span class="button-icon" aria-hidden="true">⚄</span>Roll the dice</button>
+        <button class="button hold-button" id="hold-button" type="button" disabled><span class="button-icon" aria-hidden="true">↗</span>Bank &amp; pass</button>
+      </div>
+      <div class="reset-row"><button class="button reset-button" id="reset-button" type="button">↺ &nbsp;New game</button></div>
+
+      <p class="rules">
+        <span><i class="rule-dot" aria-hidden="true"></i>Roll both dice to build your turn score.</span>
+        <span><i class="rule-dot" aria-hidden="true"></i>Bank your points before rolling a 1.</span>
+        <span><i class="rule-dot" aria-hidden="true"></i>Double sixes earn a 25-point bonus.</span>
+      </p>
+      <p class="sr-only" id="game-announcer" aria-live="assertive"></p>
+    </main>
+  </div>
+
+  <script>
+    (() => {
+      const goalSelect = document.querySelector("#goal-select");
+      const rollButton = document.querySelector("#roll-button");
+      const holdButton = document.querySelector("#hold-button");
+      const resetButton = document.querySelector("#reset-button");
+      const resultMessage = document.querySelector("#result-message");
+      const announcer = document.querySelector("#game-announcer");
+      const state = {
+        scores: [0, 0],
+        turnScore: 0,
+        currentPlayer: 0,
+        target: Number(goalSelect.value),
+        finished: false
+      };
+
+      function render() {
+        for (let player = 0; player < 2; player += 1) {
+          document.querySelector(`#score-${player}`).textContent = state.scores[player];
+          document.querySelector(`#progress-${player}`).style.width = `${Math.min(100, state.scores[player] / state.target * 100)}%`;
+          const panel = document.querySelector(`#player-panel-${player}`);
+          panel.classList.toggle("active", !state.finished && state.currentPlayer === player);
+          panel.classList.toggle("winner", state.finished && state.scores[player] >= state.target);
+        }
+
+        document.querySelector("#current-player").textContent = `Player ${state.currentPlayer + 1}`;
+        document.querySelector("#turn-score").textContent = state.turnScore;
+        document.querySelector("#target-label").textContent = state.target;
+        rollButton.disabled = state.finished;
+        holdButton.disabled = state.finished || state.turnScore === 0;
+      }
+
+      function setDice(first, second) {
+        document.querySelector("#die-0").dataset.value = first;
+        document.querySelector("#die-1").dataset.value = second;
+        document.querySelector(".dice-pair").setAttribute("aria-label", `Dice show ${first} and ${second}`);
+        document.querySelector("#roll-total").textContent = first + second;
+      }
+
+      function endTurn(message, kind = "") {
+        state.turnScore = 0;
+        state.currentPlayer = 1 - state.currentPlayer;
+        resultMessage.className = `dice-result ${kind}`;
+        resultMessage.textContent = message;
+        announcer.textContent = `${message} Player ${state.currentPlayer + 1}'s turn.`;
+        render();
+      }
+
+      function rollDie() {
+        return Math.floor(Math.random() * 6) + 1;
+      }
+
+      rollButton.addEventListener("click", () => {
+        if (state.finished) return;
+
+        const first = rollDie();
+        const second = rollDie();
+        const total = first + second;
+        setDice(first, second);
+
+        if (first === 1 || second === 1) {
+          endTurn(`A ${first === 1 && second === 1 ? "double ones" : "one"}! Turn points are lost.`, "risk");
+          return;
+        }
+
+        state.turnScore += total;
+        if (first === 6 && second === 6) {
+          state.turnScore += 25;
+          resultMessage.className = "dice-result lucky";
+          resultMessage.textContent = "Double six! +25 bonus";
+          announcer.textContent = "Double six! 25 bonus points added.";
+        } else {
+          resultMessage.className = "dice-result";
+          resultMessage.textContent = `+${total} points. Roll or bank?`;
+          announcer.textContent = `${total} points. Turn total ${state.turnScore}. Roll again or bank.`;
+        }
+
+        if (state.scores[state.currentPlayer] + state.turnScore >= state.target) {
+          const winner = state.currentPlayer;
+          state.scores[winner] += state.turnScore;
+          state.turnScore = 0;
+          state.finished = true;
+          resultMessage.className = "dice-result lucky";
+          resultMessage.textContent = `Player ${winner + 1} wins!`;
+          announcer.textContent = `Player ${winner + 1} wins! Start a new game to play again.`;
+        }
+
+        render();
+      });
+
+      holdButton.addEventListener("click", () => {
+        if (state.finished || state.turnScore === 0) return;
+
+        const banked = state.turnScore;
+        state.scores[state.currentPlayer] += banked;
+        if (state.scores[state.currentPlayer] >= state.target) {
+          state.finished = true;
+          resultMessage.className = "dice-result lucky";
+          resultMessage.textContent = `Player ${state.currentPlayer + 1} wins!`;
+          announcer.textContent = `Player ${state.currentPlayer + 1} wins with ${state.scores[state.currentPlayer]} points! Start a new game to play again.`;
+          state.turnScore = 0;
+          render();
+          return;
+        }
+
+        endTurn(`Player ${state.currentPlayer + 1} banks ${banked} points.`, "lucky");
+      });
+
+      goalSelect.addEventListener("change", () => {
+        state.target = Number(goalSelect.value);
+        render();
+      });
+
+      resetButton.addEventListener("click", () => {
+        state.scores = [0, 0];
+        state.turnScore = 0;
+        state.currentPlayer = 0;
+        state.finished = false;
+        setDice(1, 1);
+        resultMessage.className = "dice-result";
+        resultMessage.textContent = "Ready when you are";
+        announcer.textContent = "New game started. Player 1's turn.";
+        render();
+        rollButton.focus();
+      });
+
+      render();
+    })();
+  </script>
+</body>
+</html>
